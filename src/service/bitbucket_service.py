@@ -1,6 +1,7 @@
 # service/bitbucket_service.py
 import os
 import subprocess
+import requests
 from src.util.bitbucket_util import BitbucketUtil
 
 class BitbucketService:
@@ -9,13 +10,42 @@ class BitbucketService:
                  cloud_workspace, cloud_username, cloud_password):
 
         self.bitbucket_server_url = bitbucket_server_url
+        self.bitbucket_cloud_url = bitbucket_cloud_url
         self.cloud_username = cloud_username
+        self.server_username = server_username
+        self.server_password = server_password
         self.cloud_password = cloud_password
         self.cloud_workspace = cloud_workspace
         self.bitbucket_server_util = BitbucketUtil(bitbucket_server_url, auth=(server_username, server_password))
         self.bitbucket_cloud_util = BitbucketUtil(bitbucket_cloud_url, auth=(cloud_username, cloud_password))
 
         self.cloud_workspace = cloud_workspace
+
+    def verify_authentication(self, url, username, password):
+        try:
+            auth_details = {'auth': (username, password)}
+            response = requests.get(url, **auth_details)
+            response.raise_for_status()
+            return True
+        except requests.exceptions.HTTPError as e:
+            print(f"Authentication failed. HTTP Error: {e}")
+            return False
+        except requests.exceptions.RequestException as e:
+            print(f"Authentication failed. An error occurred: {e}")
+            return False
+        except Exception as ex:
+            return ex
+
+    def verify_auth_details(self):
+        verify_src = self.verify_authentication(self.bitbucket_server_url, self.server_username, self.server_password)
+        verify_dest = self.verify_authentication(self.bitbucket_cloud_url, self.cloud_username, self.cloud_password)
+
+        if not verify_src:
+            return "Invalid credentials for source", 401
+        if not verify_dest:
+            return "Invalid credentials for destination", 401
+
+        return "Authentication successful", 200
 
     def get_bitbucket_projects(self):
         # Fetch projects from Bitbucket Server using the BitbucketUtil
@@ -53,7 +83,7 @@ class BitbucketService:
             'name': project_name,
             'description': project_description
         }
-        cloud_response = self.bitbucket_cloud_util.post(f'/workspaces/{self.cloud_workspace}/projects', json=cloud_project_data)
+        cloud_response = self.bitbucket_cloud_util.post(f'/2.0/workspaces/{self.cloud_workspace}/projects', json=cloud_project_data)
 
         if cloud_response.status_code == 201:
             return f"Project with key {project_key} successfully created in Bitbucket Cloud."
@@ -69,14 +99,14 @@ class BitbucketService:
             'description': repository_description
         }
 
-        cloud_response = self.bitbucket_cloud_util.post(f'/repositories/{self.cloud_workspace}/{repository_name}', json=cloud_repository_data)
+        cloud_response = self.bitbucket_cloud_util.post(f'/2.0/repositories/{self.cloud_workspace}/{repository_name}', json=cloud_repository_data)
 
         if cloud_response.status_code == 201:
             return f"Repository {repository_name} successfully created in Bitbucket Cloud.",cloud_response.status_code
 
     def project_exists_in_cloud(self, project_key):
         # Check if the project already exists in Bitbucket Cloud
-        cloud_projects = self.bitbucket_cloud_util.get(f'/workspaces/{self.cloud_workspace}/projects').json()
+        cloud_projects = self.bitbucket_cloud_util.get(f'/2.0/workspaces/{self.cloud_workspace}/projects').json()
         existing_project_keys = [proj['key'] for proj in cloud_projects['values']]
         return project_key in existing_project_keys
         

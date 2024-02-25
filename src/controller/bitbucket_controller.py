@@ -35,10 +35,15 @@ class BitbucketProjects(Resource):
             cloud_workspace, cloud_username, cloud_password
         )
 
+        # Verify authentication before migrating
+        auth_verification_result, status_code = bitbucket_service.verify_auth_details()
+        if status_code != 200:
+            return auth_verification_result, status_code
+
         # Use the service layer to fetch projects from Bitbucket Server
         source_projects = bitbucket_service.get_bitbucket_projects()
 
-        # Iterate over source projects and create them in Bitbucket Cloud
+        # Iterate over server projects and create them in Bitbucket Cloud
         for project in source_projects:
             project_key = project['key']
             project_name = project['name']
@@ -46,7 +51,6 @@ class BitbucketProjects(Resource):
 
             # Create the project in Bitbucket Cloud
             result_message = bitbucket_service.create_bitbucket_project(project_key, project_name, project_description)
-            # print(result_message)
 
             # Fetch repositories for the project from Bitbucket Server
             source_repositories = bitbucket_service.get_repositories_for_project(project_key)
@@ -59,6 +63,7 @@ class BitbucketProjects(Resource):
                 # Create the repository in Bitbucket Cloud
                 result_message = bitbucket_service.create_bitbucket_repository(project_key, repository_name, repository_description, public)
                 # print(result_message)
-                print(project_name)
+                # print(project_name)
 
+                # fetch all the repos branches it's metadata from source and push it to bitbucket cloud
                 result_message = bitbucket_service.create_and_push_repository(project_key, repository_name, project_name)
