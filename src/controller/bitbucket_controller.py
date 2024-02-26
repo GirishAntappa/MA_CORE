@@ -50,7 +50,7 @@ class BitbucketProjects(Resource):
             project_description = project.get('description', '')
 
             # Create the project in Bitbucket Cloud
-            result_message = bitbucket_service.create_bitbucket_project(project_key, project_name, project_description)
+            response = bitbucket_service.create_bitbucket_project(project_key, project_name, project_description)
 
             # Fetch repositories for the project from Bitbucket Server
             source_repositories = bitbucket_service.get_repositories_for_project(project_key)
@@ -61,9 +61,8 @@ class BitbucketProjects(Resource):
                 public = repository['public']
 
                 # Create the repository in Bitbucket Cloud
-                result_message = bitbucket_service.create_bitbucket_repository(project_key, repository_name, repository_description, public)
-                # print(result_message)
-                # print(project_name)
+                response = bitbucket_service.create_bitbucket_repository(project_key, repository_name, repository_description, public)
+                # print(response)
 
                 # fetch all the repos branches it's metadata from source and push it to bitbucket cloud
-                result_message = bitbucket_service.create_and_push_repository(project_key, repository_name, project_name)
+                response = bitbucket_service.create_and_push_repository(project_key, repository_name, project_name)

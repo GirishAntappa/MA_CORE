@@ -67,7 +67,7 @@ class BitbucketService:
             repositories_data = response.json()
             repositories = repositories_data['values']
 
-            print(f"Repositories for project {project_key} - {repositories}")
+            # print(f"Repositories for project {project_key} - {repositories}")
             return repositories
         else:
             raise Exception(f'Failed to fetch repositories for project {project_key}. Status code: {response.status_code}')
